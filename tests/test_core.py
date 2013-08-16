@@ -6980,6 +6980,12 @@ def process(filename):
     expected = open(path_from_root('tests', 'sys', 'uio.c.txt'), 'r').read()
     self.do_run(src, expected, force_c=True)
 
+  def test_sys_sendfile(self):
+    if self.emcc_args is None: return self.skip('requires emcc')
+    src = open(path_from_root('tests', 'sys', 'sendfile.c'), 'r').read()
+    expected = open(path_from_root('tests', 'sys', 'sendfile.c.txt'), 'r').read()
+    self.do_run(src, expected, force_c=True)
+
   def test_libgen(self):
     src = r'''
       #include <stdio.h>
