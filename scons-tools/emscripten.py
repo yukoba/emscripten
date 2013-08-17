@@ -287,9 +287,9 @@ def generate(env):
             '-Xclang', '-nobuiltininc',
             '-Xclang', '-nostdsysteminc',
             '-Xclang', '-isystem$EMSCRIPTEN_HOME/system/include',
-            '-Xclang', '-isystem$EMSCRIPTEN_HOME/system/include/libc',
+            '-Xclang', '-isystem$EMSCRIPTEN_HOME/system/include/musl/arch/js',
+            '-Xclang', '-isystem$EMSCRIPTEN_HOME/system/musl/include',
             '-Xclang', '-isystem$EMSCRIPTEN_HOME/system/include/libcxx',
-            '-Xclang', '-isystem$EMSCRIPTEN_HOME/system/include/bsd',
             '-emit-llvm'],
         CXXFLAGS=['-std=c++11', '-fno-exceptions'],
     )

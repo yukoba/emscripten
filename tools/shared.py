@@ -536,6 +536,7 @@ COMPILER_OPTS = COMPILER_OPTS + ['-m32', '-U__i386__', '-U__i386', '-Ui386',
                                  '-U__SSE__', '-U__SSE_MATH__', '-U__SSE2__', '-U__SSE2_MATH__', '-U__MMX__',
                                  '-DEMSCRIPTEN', '-D__EMSCRIPTEN__', '-U__STRICT_ANSI__',
                                  '-D__IEEE_LITTLE_ENDIAN', '-fno-math-errno',
+                                 '-D_XOPEN_SOURCE=700',
                                  #'-fno-threadsafe-statics', # disabled due to issue 1289
                                  '-target', LLVM_TARGET]
 
@@ -553,8 +554,8 @@ if USE_EMSDK:
     '-Xclang', '-isystem' + path_from_root('system', 'include', 'libcxx'),
     '-Xclang', '-isystem' + path_from_root('system', 'include'),
     '-Xclang', '-isystem' + path_from_root('system', 'include', 'emscripten'),
-    '-Xclang', '-isystem' + path_from_root('system', 'include', 'bsd'), # posix stuff
-    '-Xclang', '-isystem' + path_from_root('system', 'include', 'libc'),
+    '-Xclang', '-isystem' + path_from_root('system', 'include', 'musl', 'arch', 'js'),
+    '-Xclang', '-isystem' + path_from_root('system', 'musl', 'include'),
     '-Xclang', '-isystem' + path_from_root('system', 'include', 'gfx'),
     '-Xclang', '-isystem' + path_from_root('system', 'include', 'net'),
     '-Xclang', '-isystem' + path_from_root('system', 'include', 'SDL'),

@@ -20,7 +20,7 @@
 LibraryManager.library = {
   // keep this low in memory, because we flatten arrays with them in them
   stdin: 'allocate(1, "i32*", ALLOC_STATIC)',
-  stdout: 'allocate(1, "i32*", ALLOC_STATIC)',
+//  stdout: 'allocate(1, "i32*", ALLOC_STATIC)',
   stderr: 'allocate(1, "i32*", ALLOC_STATIC)',
   _impure_ptr: 'allocate(1, "i32*", ALLOC_STATIC)',
 
@@ -2774,6 +2774,7 @@ LibraryManager.library = {
     if (limit < n || (n === undefined)) {{{ makeSetValue('s', 'i', '0', 'i8') }}};
     return result.length;
   },
+/*
   fprintf__deps: ['fwrite', '_formatString'],
   fprintf: function(stream, format, varargs) {
     // int fprintf(FILE *restrict stream, const char *restrict format, ...);
@@ -2791,6 +2792,7 @@ LibraryManager.library = {
     var stdout = {{{ makeGetValue(makeGlobalUse('_stdout'), '0', 'void*') }}};
     return _fprintf(stdout, format, varargs);
   },
+*/
   sprintf__deps: ['snprintf'],
   sprintf: function(s, format, varargs) {
     // int sprintf(char *restrict s, const char *restrict format, ...);
@@ -2801,7 +2803,7 @@ LibraryManager.library = {
   asprintf: function(s, format, varargs) {
     return _sprintf(-s, format, varargs);
   },
-
+/*
 #if TARGET_X86
   // va_arg is just like our varargs
   vfprintf: 'fprintf',
@@ -2849,7 +2851,7 @@ LibraryManager.library = {
     return _sscanf(s, format, {{{ makeGetValue('va_arg', 0, '*') }}});
   },
 #endif
-
+*/
   fopen64: 'fopen',
   __01fopen64_: 'fopen',
   __01freopen64_: 'freopen',
@@ -8165,6 +8167,28 @@ LibraryManager.library = {
     }
     tempRet0 = 0;
     return (high >>> (bits - 32))|0;
+  },
+  __syscall3: function(n, a1, a2, a3) {
+//        console.log("[syscall] number = " + n);
+      switch (n) {
+          case 146: // SYS_writev
+//              console.log("a1 = " + a1);
+            if (a1 == 1) { // stdout
+//              console.log("a3 = " + a3);
+                var written = 0;
+                for (var i = 0; i < a3; i++) {
+                    var iov_len = {{{ makeGetValue('a2', '4 + 8 * i', 'i32') }}};
+//                  console.log("iov_len = " + iov_len);
+                    if (iov_len > 0) {
+                        console.log(Pointer_stringify({{{ makeGetValue('a2', '8 * i', 'i32') }}}));
+                        written += iov_len;
+                    }
+                }
+                return written;
+            }
+            break;
+      }
+      return 0;
   },
 };
 

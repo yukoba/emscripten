@@ -1203,13 +1203,10 @@ try:
 
     lib_opts = ['-O2']
 
-    # XXX We also need to add libc symbols that use malloc, for example strdup. It's very rare to use just them and not
-    #     a normal malloc symbol (like free, after calling strdup), so we haven't hit this yet, but it is possible.
-    libc_symbols = read_symbols(shared.path_from_root('system', 'lib', 'libc.symbols'))
-    sdl_symbols = read_symbols(shared.path_from_root('system', 'lib', 'sdl.symbols'))
-    libcextra_symbols = read_symbols(shared.path_from_root('system', 'lib', 'libcextra.symbols'))
+    libc_symbols = set()
     libcxx_symbols = read_symbols(shared.path_from_root('system', 'lib', 'libcxx', 'symbols'), exclude=libc_symbols)
     libcxxabi_symbols = read_symbols(shared.path_from_root('system', 'lib', 'libcxxabi', 'symbols'), exclude=libc_symbols)
+    sdl_symbols = read_symbols(shared.path_from_root('system', 'lib', 'sdl.symbols'))
 
     # XXX we should disable EMCC_DEBUG when building libs, just like in the relooper
 
@@ -1217,10 +1214,10 @@ try:
       o_s = []
       prev_cxx = os.environ.get('EMMAKEN_CXX')
       if prev_cxx: os.environ['EMMAKEN_CXX'] = ''
-      musl_internal_includes = shared.path_from_root('system', 'lib', 'libc', 'musl', 'src', 'internal')
+      musl_internal_includes = shared.path_from_root('system', 'musl', 'src', 'internal')
       for src in files:
         o = in_temp(os.path.basename(src) + '.o')
-        execute([shared.PYTHON, shared.EMCC, shared.path_from_root('system', 'lib', src), '-o', o, '-I', musl_internal_includes] + lib_opts, stdout=stdout, stderr=stderr)
+        execute([shared.PYTHON, shared.EMCC, shared.path_from_root('system', 'musl', src), '-o', o, '-I', musl_internal_includes, '-std=c99'] + lib_opts, stdout=stdout, stderr=stderr)
         o_s.append(o)
       if prev_cxx: os.environ['EMMAKEN_CXX'] = prev_cxx
       shared.Building.link(o_s, in_temp(lib_filename))
@@ -1238,21 +1235,17 @@ try:
 
     # libc
     def create_libc():
-      logging.debug(' building libc for cache')
-      libc_files = [
-        'dlmalloc.c',
-        os.path.join('libcxx', 'new.cpp'),
-        os.path.join('libc', 'stdlib', 'getopt_long.c'),
-        os.path.join('libc', 'gen', 'err.c'),
-        os.path.join('libc', 'gen', 'errx.c'),
-        os.path.join('libc', 'gen', 'warn.c'),
-        os.path.join('libc', 'gen', 'warnx.c'),
-        os.path.join('libc', 'gen', 'verr.c'),
-        os.path.join('libc', 'gen', 'verrx.c'),
-        os.path.join('libc', 'gen', 'vwarn.c'),
-        os.path.join('libc', 'gen', 'vwarnx.c'),
-        os.path.join('libc', 'stdlib', 'strtod.c'),
-      ]
+      logging.info(' building libc for cache. This takes a few minutes.')
+      libc_files = []
+      dirs = os.listdir(shared.path_from_root('system', 'musl', 'src'))
+      for dir in dirs:
+        child_dir = shared.path_from_root('system', 'musl', 'src', dir)
+        if os.path.isdir(child_dir):
+          files = os.listdir(child_dir)
+          for file in files:
+            build_file = shared.path_from_root('system', 'musl', 'src', dir, file)
+            if build_file.endswith('.c'):
+              libc_files.append(build_file)
       return build_libc('libc.bc', libc_files)
 
     def apply_libc(need):
@@ -1261,92 +1254,9 @@ try:
         if shared.Settings.CORRECT_SIGNS == 0: raise Exception('we need to change to 2')
       except: # we fail if equal to 0 - so we need to switch to 2 - or if CORRECT_SIGNS is not even in Settings
         shared.Settings.CORRECT_SIGNS = 2
-      if shared.Settings.CORRECT_SIGNS == 2:
-        shared.Settings.CORRECT_SIGNS_LINES = [shared.path_from_root('src', 'dlmalloc.c') + ':' + str(i+4) for i in [4816, 4191, 4246, 4199, 4205, 4235, 4227]]
       # If we are in mode 1, we are correcting everything anyhow. If we are in mode 3, we will be corrected
       # so all is well anyhow too.
       return True
-
-    # libcextra
-    def create_libcextra():
-      logging.debug('building libcextra for cache')
-      musl_files = [
-         ['ctype', [
-          'iswalnum.c',
-          'iswalpha.c',
-          'iswblank.c',
-          'iswcntrl.c',
-          'iswctype.c',
-          'iswdigit.c',
-          'iswgraph.c',
-          'iswlower.c',
-          'iswprint.c',
-          'iswpunct.c',
-          'iswspace.c',
-          'iswupper.c',
-          'iswxdigit.c',
-          'towctrans.c',
-          'wcswidth.c',
-          'wctrans.c',
-          'wcwidth.c',
-         ]],
-         ['multibyte', [
-          'btowc.c',
-          'mblen.c',
-          'mbrlen.c',
-          'mbrtowc.c',
-          'mbsinit.c',
-          'mbsnrtowcs.c',
-          'mbsrtowcs.c',
-          'mbstowcs.c',
-          'mbtowc.c',
-          'wcrtomb.c',
-          'wcsnrtombs.c',
-          'wcsrtombs.c',
-          'wcstombs.c',
-          'wctob.c',
-          'wctomb.c',
-         ]],
-         ['stdlib', [
-           'ecvt.c',
-           'fcvt.c',
-           'gcvt.c',
-         ]],
-         ['string', [
-           'wcpcpy.c',
-           'wcpncpy.c',
-           'wcscasecmp.c',
-           # 'wcscasecmp_l.c', # XXX: alltypes.h issue
-           'wcscat.c',
-           'wcschr.c',
-           'wcscmp.c',
-           'wcscpy.c',
-           'wcscspn.c',
-           'wcsdup.c',
-           'wcslen.c',
-           'wcsncasecmp.c',
-           # 'wcsncasecmp_l.c', # XXX: alltypes.h issue
-           'wcsncat.c',
-           'wcsncmp.c',
-           'wcsncpy.c',
-           'wcsnlen.c',
-           'wcspbrk.c',
-           'wcsrchr.c',
-           'wcsspn.c',
-           'wcsstr.c',
-           'wcstok.c',
-           'wcswcs.c',
-           'wmemchr.c',
-           'wmemcmp.c',
-           'wmemcpy.c',
-           'wmemmove.c',
-           'wmemset.c',
-         ]]
-      ]
-      libcextra_files = []
-      for directory, sources in musl_files:
-        libcextra_files += [os.path.join('libc', 'musl', 'src', directory, source) for source in sources]
-      return build_libc('libcextra.bc', libcextra_files)
 
     # libcxx
     def create_libcxx():
@@ -1424,7 +1334,6 @@ try:
     # If we have libcxx, we must force inclusion of libc, since libcxx uses new internally. Note: this is kind of hacky.
     has = need = None
     for name, create, apply_, library_symbols in [('libcxx',    create_libcxx,    apply_libcxx,    libcxx_symbols),
-                                                  ('libcextra', create_libcextra, lambda x: True,  libcextra_symbols),
                                                   ('libcxxabi', create_libcxxabi, apply_libcxxabi, libcxxabi_symbols),
                                                   ('sdl',       create_sdl,       apply_sdl,       sdl_symbols),
                                                   ('libc',      create_libc,      apply_libc,      libc_symbols)]:

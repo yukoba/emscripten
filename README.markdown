@@ -12,3 +12,7 @@ Main project page: <http://emscripten.org>
 
 Emscripten is MIT licensed, see LICENSE.txt.
 
+About git submodules
+==========
+
+Please call `git submodule update --init` after `git clone` for the first time.
