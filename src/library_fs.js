@@ -1,6 +1,5 @@
 mergeInto(LibraryManager.library, {
-//  $FS__deps: ['$ERRNO_CODES', '$ERRNO_MESSAGES', '__setErrNo', '$VFS', '$PATH', '$TTY', '$MEMFS', 'stdin', 'stdout', 'stderr', 'fflush'],
-  $FS__deps: ['$ERRNO_CODES', '$ERRNO_MESSAGES', '__setErrNo', '$VFS', '$PATH', '$TTY', '$MEMFS', 'stdin', 'stderr', 'fflush'],
+  $FS__deps: ['$ERRNO_CODES', '$ERRNO_MESSAGES', '__setErrNo', '$VFS', '$PATH', '$TTY', '$MEMFS', 'fflush'],
   $FS__postset: 'FS.staticInit();' +
                 '__ATINIT__.unshift({ func: function() { if (!Module["noFSInit"] && !FS.init.initialized) FS.init() } });' +
                 '__ATMAIN__.push({ func: function() { FS.ignorePermissions = false } });' +
@@ -389,7 +388,7 @@ mergeInto(LibraryManager.library, {
     //
     MAX_OPEN_FDS: 4096,
     nextfd: function(fd_start, fd_end) {
-      fd_start = fd_start || 1;
+      fd_start = fd_start || 0;
       fd_end = fd_end || FS.MAX_OPEN_FDS;
       for (var fd = fd_start; fd <= fd_end; fd++) {
         if (!FS.streams[fd]) {
@@ -421,6 +420,7 @@ mergeInto(LibraryManager.library, {
         }
       });
       FS.streams[fd] = stream;
+      stream.hasData = function() { return false; }
       return stream;
     },
     closeStream: function(fd) {
@@ -857,16 +857,11 @@ mergeInto(LibraryManager.library, {
 
       // open default streams for the stdin, stdout and stderr devices
       var stdin = FS.open('/dev/stdin', 'r');
-      {{{ makeSetValue(makeGlobalUse('_stdin'), 0, 'stdin.fd', 'void*') }}};
-      assert(stdin.fd === 1, 'invalid handle for stdin (' + stdin.fd + ')');
-
+      assert(stdin.fd === 0, 'invalid handle for stdin (' + stdin.fd + ')');
       var stdout = FS.open('/dev/stdout', 'w');
-//    {{{ makeSetValue(makeGlobalUse('_stdout'), 0, 'stdout.fd', 'void*') }}};
-//      assert(stdout.fd === 2, 'invalid handle for stdout (' + stdout.fd + ')');
-
+      assert(stdout.fd === 1, 'invalid handle for stdout (' + stdout.fd + ')');
       var stderr = FS.open('/dev/stderr', 'w');
-      {{{ makeSetValue(makeGlobalUse('_stderr'), 0, 'stderr.fd', 'void*') }}};
-      assert(stderr.fd === 3, 'invalid handle for stderr (' + stderr.fd + ')');
+      assert(stderr.fd === 2, 'invalid handle for stderr (' + stderr.fd + ')');
     },
     staticInit: function() {
       FS.name_table = new Array(4096);
@@ -1137,7 +1132,7 @@ mergeInto(LibraryManager.library, {
       });
     },
     lchmod: function(path, mode) {
-      FS.chmod(path, mode, true);
+      FS.cfhmodat(cDefine('AT_FDCWD'), path, mode, cDefine('AT_SYMLINK_NOFOLLOW'));
     },
     fchmod: function(fd, mode) {
       var stream = FS.getStream(fd);
@@ -1145,6 +1140,14 @@ mergeInto(LibraryManager.library, {
         throw new FS.ErrnoError(ERRNO_CODES.EBADF);
       }
       FS.chmod(stream.node, mode);
+    },
+    fchmodat: function(fd, pathname, mode, flags) {
+      if (fd == {{{ cDefine('AT_FDCWD') }}} && flags == {{{ cDefine('AT_SYMLINK_NOFOLLOW') }}}) {
+        FS.chmod(pathname, mode, true);
+      } else {
+        // Unimplemented
+        throw new FS.ErrnoError(ERRNO_CODES.EINVAL);
+      }
     },
     chown: function(path, uid, gid, dontFollow) {
       var node;

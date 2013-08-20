@@ -1,6 +1,12 @@
 
 // === Auto-generated postamble setup entry stuff ===
 
+function initSyscallTable() {
+  for (var i = 0; i < SYSCALL_TABLE.length; i++) {
+    SYSCALL_TABLE[i] = getCFunc(SYSCALL_TABLE[i]);
+  }
+}
+
 function ExitStatus(status) {
   this.name = "ExitStatus";
   this.message = "Program terminated with exit(" + status + ")";
@@ -17,6 +23,7 @@ Module['callMain'] = Module.callMain = function callMain(args) {
 
   args = args || [];
 
+  initSyscallTable();
   ensureInitRuntime();
 
   var argc = args.length+1;

@@ -1337,7 +1337,7 @@ try:
                                                   ('libcxxabi', create_libcxxabi, apply_libcxxabi, libcxxabi_symbols),
                                                   ('sdl',       create_sdl,       apply_sdl,       sdl_symbols),
                                                   ('libc',      create_libc,      apply_libc,      libc_symbols)]:
-      force_this = force_all or force == name
+      force_this = force_all or force == name or name == 'libc'
       if not force_this:
         need = set()
         has = set()
