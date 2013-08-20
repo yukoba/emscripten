@@ -105,15 +105,19 @@ LibraryManager.library = {
   // sys/stat.h
   // ==========================================================================
 
-  __stat_struct_layout: Runtime.generateStructInfo([
+  __stat64_struct_layout: Runtime.generateStructInfo([
     ['i32', 'st_dev'],
+    ['i32', 'st_unused0'],
+    ['i32', 'st_unused1'],
     ['i32', 'st_ino'],
     ['i32', 'st_mode'],
     ['i32', 'st_nlink'],
     ['i32', 'st_uid'],
     ['i32', 'st_gid'],
     ['i32', 'st_rdev'],
+    ['i32', 'st_unused2'],
     ['i32', 'st_size'],
+    ['i32', 'st_unused3'],
     ['i32', 'st_atime'],
     ['i32', 'st_spare1'],
     ['i32', 'st_mtime'],
@@ -122,9 +126,10 @@ LibraryManager.library = {
     ['i32', 'st_spare3'],
     ['i32', 'st_blksize'],
     ['i32', 'st_blocks'],
+    ['i32', 'st_unused4'],
     ['i32', 'st_spare4']]),
-  __sys_stat__deps: ['$FS', '__stat_struct_layout'],
-  __sys_stat: function(path, buf, dontResolveLastLink) {
+  __sys_stat64__deps: ['$FS', '__stat64_struct_layout'],
+  __sys_stat64: function(path, buf, dontResolveLastLink) {
     // http://pubs.opengroup.org/onlinepubs/7908799/xsh/stat.html
     // int stat(const char *path, struct stat *buf);
     // NOTE: dontResolveLastLink is a shortcut for lstat(). It should never be
@@ -132,33 +137,33 @@ LibraryManager.library = {
     path = typeof path !== 'string' ? Pointer_stringify(path) : path;
     try {
       var stat = dontResolveLastLink ? FS.lstat(path) : FS.stat(path);
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_dev', 'stat.dev', 'i32') }}};
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_ino', 'stat.ino', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_mode', 'stat.mode', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_nlink', 'stat.nlink', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_uid', 'stat.uid', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_gid', 'stat.gid', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_rdev', 'stat.rdev', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_size', 'stat.size', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_atime', 'Math.floor(stat.atime.getTime() / 1000)', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_mtime', 'Math.floor(stat.mtime.getTime() / 1000)', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_ctime', 'Math.floor(stat.ctime.getTime() / 1000)', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_blksize', '4096', 'i32') }}}
-      {{{ makeSetValue('buf', '___stat_struct_layout.st_blocks', 'stat.blocks', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_dev', 'stat.dev', 'i32') }}};
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_ino', 'stat.ino', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_mode', 'stat.mode', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_nlink', 'stat.nlink', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_uid', 'stat.uid', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_gid', 'stat.gid', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_rdev', 'stat.rdev', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_size', 'stat.size', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_atime', 'Math.floor(stat.atime.getTime() / 1000)', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_mtime', 'Math.floor(stat.mtime.getTime() / 1000)', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_ctime', 'Math.floor(stat.ctime.getTime() / 1000)', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_blksize', '4096', 'i32') }}}
+      {{{ makeSetValue('buf', '___stat64_struct_layout.st_blocks', 'stat.blocks', 'i32') }}}
       return 0;
     } catch (e) {
       FS.handleFSError(e);
       return -1;
     }
   },
-  __sys_lstat__deps: ['stat'],
-  __sys_lstat: function(path, buf) {
+  __sys_lstat64__deps: ['__sys_stat64'],
+  __sys_lstat64: function(path, buf) {
     // int lstat(const char *path, struct stat *buf);
     // http://pubs.opengroup.org/onlinepubs/7908799/xsh/lstat.html
-    return _stat(path, buf, true);
+    return ___sys_stat64(path, buf, true);
   },
-  __sys_fstat__deps: ['$FS', '__setErrNo', '$ERRNO_CODES', 'stat'],
-  __sys_fstat: function(fildes, buf) {
+  __sys_fstat64__deps: ['$FS', '__setErrNo', '$ERRNO_CODES', '__sys_stat64'],
+  __sys_fstat64: function(fildes, buf) {
     // int fstat(int fildes, struct stat *buf);
     // http://pubs.opengroup.org/onlinepubs/7908799/xsh/fstat.html
     var stream = FS.getStream(fildes);
@@ -166,7 +171,7 @@ LibraryManager.library = {
       ___setErrNo(ERRNO_CODES.EBADF);
       return -1;
     }
-    return _stat(stream.path, buf);
+    return ___sys_stat64(stream.path, buf);
   },
   __sys_mknod__deps: ['$FS', '__setErrNo', '$ERRNO_CODES'],
   __sys_mknod: function(path, mode, dev) {
@@ -4071,9 +4076,9 @@ LibraryManager.library = {
     '__sys_fchown',
     '__sys_statfs',
     '__sys_fstatfs',
-    '__sys_stat',
-    '__sys_lstat',
-    '__sys_fstat',
+    '__sys_stat64',
+    '__sys_lstat64',
+    '__sys_fstat64',
     '__sys_fsync',
     '__sys_uname',
     '__sys_getpgid',
@@ -4196,9 +4201,9 @@ LibraryManager.library = {
     '__sys_unimplemented',       // SYS_syslog
     '__sys_unimplemented',       // SYS_setitimer
     '__sys_unimplemented',       // SYS_getitimer
-    '__sys_stat',                // SYS_stat
-    '__sys_lstat',               // SYS_lstat
-    '__sys_fstat',               // SYS_fstat
+    '__sys_unimplemented',       // SYS_stat
+    '__sys_unimplemented',       // SYS_lstat
+    '__sys_unimplemented',       // SYS_fstat
     '__sys_unimplemented',       // SYS_olduname
     '__sys_unimplemented',       // SYS_iopl
     '__sys_unimplemented',       // SYS_vhangup
@@ -4285,9 +4290,9 @@ LibraryManager.library = {
     '__sys_unimplemented',       // SYS_mmap2
     '__sys_unimplemented',       // SYS_truncate64
     '__sys_unimplemented',       // SYS_ftruncate64
-    '__sys_unimplemented',       // SYS_stat64
-    '__sys_unimplemented',       // SYS_lstat64
-    '__sys_unimplemented',       // SYS_fstat64
+    '__sys_stat64',              // SYS_stat64
+    '__sys_lstat64',             // SYS_lstat64
+    '__sys_fstat64',             // SYS_fstat64
     '__sys_unimplemented',       // SYS_lchown32
     '__sys_unimplemented',       // SYS_getuid32
     '__sys_unimplemented',       // SYS_getgid32
