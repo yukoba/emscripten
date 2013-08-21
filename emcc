@@ -1294,10 +1294,11 @@ try:
       #logging.info('using libcxx turns on CORRECT_* options')
       return True
 
-    # libcxxabi - just for dynamic_cast for now
+    # libcxxabi
     def create_libcxxabi():
       logging.debug('building libcxxabi for cache')
       libcxxabi_files = [
+        'cxa_new_delete.cpp',
         'typeinfo.cpp',
         'private_typeinfo.cpp'
       ]
