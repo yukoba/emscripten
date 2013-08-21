@@ -23,7 +23,6 @@ Module['callMain'] = Module.callMain = function callMain(args) {
 
   args = args || [];
 
-  initSyscallTable();
   ensureInitRuntime();
 
   var argc = args.length+1;
@@ -92,6 +91,7 @@ function run(args) {
   }
 
   function doRun() {
+    initSyscallTable();
     ensureInitRuntime();
 
     preMain();
